@@ -11,8 +11,10 @@ CORS(app, resources={r"/*": {"origins": [
     "https://winning-products-analyzer-981a007e.preview.vitara.app"  # preview build
 ]}})
 
+# ✅ Load RapidAPI key from environment (Render Dashboard > Environment Variables)
 RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY", "YOUR_RAPIDAPI_KEY")
 RAPIDAPI_HOST = "google-trends-api5.p.rapidapi.com"
+
 print("DEBUG: RapidAPI Key first 6 chars ->", RAPIDAPI_KEY[:6])
 
 @app.route("/trends", methods=["GET"])
@@ -30,8 +32,14 @@ def get_trends():
     }
     try:
         response = requests.post(url, json=payload, headers=headers)
-        return jsonify(response.json())
+        data = response.json()
+
+        # 👇 DEBUG PRINT (shows up in Render logs)
+        print("DEBUG: RapidAPI response ->", data)
+
+        return jsonify(data)
     except Exception as e:
+        print("ERROR calling RapidAPI ->", str(e))
         return jsonify({"error": str(e)}), 500
 
 @app.route("/", methods=["GET"])
