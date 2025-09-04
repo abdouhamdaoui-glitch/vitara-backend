@@ -1,25 +1,19 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-import requests
-import random
+from pytrends.request import TrendReq
 from datetime import datetime
 import os
 
 app = Flask(__name__)
-CORS(app) # Allow all origins for now
+CORS(app)  # Allow all origins for now
 
-# API Configuration
-API_HOST = 'google-trends21.p.rapidapi.com'
-API_KEY = os.environ.get('RAPIDAPI_KEY', '24b5aa43d1msh6602bfbd74dcefep190f3cjsn19fa0c61e536')
-HEADERS = {
-    'x-rapidapi-host': API_HOST,
-    'x-rapidapi-key': API_KEY,
-}
+# Initialize pytrends
+pytrends = TrendReq(hl='en-US', tz=360)
 
 # Pre-defined list of common trending topics for fallback
 TRENDING_TOPICS = [
     "Taylor Swift", "NBA", "NFL", "Weather", "Stock Market",
-    "COVID updates", "Elections", "New movies", "Sports news", 
+    "COVID updates", "Elections", "New movies", "Sports news",
     "Technology trends", "Travel destinations", "Food recipes",
     "Music releases", "Gaming news", "Education resources",
     "Space news", "Climate change", "Health tips", "Business news",
@@ -31,44 +25,28 @@ TRENDING_TOPICS = [
 
 @app.route("/trends", methods=["GET"])
 def get_trending_now():
-    """Get trending topics from Google Trends API or fallback data."""
-    api_url = f"https://{API_HOST}/getTrendingNow?country=US&time=4&hl=en-US&tz=300"
-    
+    """Get trending topics from pytrends or fallback data."""
     try:
-        response = requests.get(api_url, headers=HEADERS, timeout=10)
-        response.raise_for_status()
-        data = response.json()
-        
-        # The new API structure is a bit different, we need to extract the data
-        trending_data = []
-        for item in data.get('results', []):
-            for trend_topic in item.get('trendingTopics', []):
-                trending_data.append({
-                    "query": trend_topic.get('query'),
-                    "traffic": trend_topic.get('traffic', 'N/A')
-                })
+        trending_searches_df = pytrends.trending_searches(pn='united_states')
+        trending_searches = trending_searches_df.to_dict('records')
 
-        if trending_data:
+        if trending_searches:
+            trends_list = [{"query": item.get("title"), "traffic": item.get("traffic", "N/A")} for item in trending_searches]
             return jsonify({
-                "trends": trending_data,
-                "count": len(trending_data),
+                "trends": trends_list,
+                "count": len(trends_list),
                 "timestamp": datetime.now().isoformat(),
-                "source": "google_trends_api",
+                "source": "pytrends_api",
                 "message": "Successfully fetched live data."
             })
         else:
-            raise ValueError("API returned no trending data.")
-            
+            raise ValueError("PyTrends returned no trending data.")
+
     except Exception as e:
-        print(f"API call failed, using fallback data. Error: {e}")
-        shuffled_topics = TRENDING_TOPICS.copy()
-        random.shuffle(shuffled_topics)
-        num_topics = random.randint(15, 25)
-        current_trends = [{"query": t, "traffic": "N/A"} for t in shuffled_topics[:num_topics]]
-        
+        print(f"PyTrends call failed, using fallback data. Error: {e}")
         return jsonify({
-            "trends": current_trends,
-            "count": len(current_trends),
+            "trends": [{"query": t, "traffic": "N/A"} for t in TRENDING_TOPICS],
+            "count": len(TRENDING_TOPICS),
             "timestamp": datetime.now().isoformat(),
             "source": "reliable_fallback",
             "message": f"Using reliable fallback data. Error: {str(e)}"
@@ -76,25 +54,29 @@ def get_trending_now():
 
 @app.route("/trends/keyword", methods=["GET"])
 def get_keyword_trends():
-    """Get trends for a specific keyword from the Google Trends API."""
+    """Get trends for a specific keyword from the pytrends."""
     keyword = request.args.get('query')
     if not keyword:
         return jsonify({"error": "Missing 'query' parameter"}), 400
-    
-    api_url = f"https://{API_HOST}/getExploreSearchTerm?keyword={keyword}&country=US&time=now%207-d&category=0&hl=en-US&tz=300"
-    
+
     try:
-        response = requests.get(api_url, headers=HEADERS, timeout=10)
-        response.raise_for_status()
-        data = response.json()
+        pytrends.build_payload(kw_list=[keyword], timeframe='today 5-y')
+        interest_over_time_df = pytrends.interest_over_time()
         
-        # This API returns a list of dictionaries with search interest data
-        return jsonify({
-            "keyword": keyword,
-            "data": data.get('default', {}).get('timelineData', []),
-            "source": "google_trends_api"
-        })
-        
+        if not interest_over_time_df.empty:
+            keyword_data = interest_over_time_df.reset_index().to_dict('records')
+            return jsonify({
+                "keyword": keyword,
+                "data": [{"date": item.get('date').isoformat(), "value": item.get(keyword)} for item in keyword_data],
+                "source": "pytrends_api",
+                "message": "Successfully fetched live data."
+            })
+        else:
+            return jsonify({
+                "error": "No data found for this keyword.",
+                "message": "PyTrends returned no data for the requested keyword."
+            }), 404
+
     except Exception as e:
         print(f"Keyword API call failed. Error: {e}")
         return jsonify({
