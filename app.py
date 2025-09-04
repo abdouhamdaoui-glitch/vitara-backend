@@ -5,26 +5,26 @@ from datetime import datetime
 import os
 
 app = Flask(__name__)
-CORS(app)  # Allow all origins for now
+CORS(app)
 
-# Initialize pytrends
+# Use a global variable for pytrends client
 pytrends = TrendReq(hl='en-US', tz=360)
 
 # Pre-defined list of common trending topics for fallback
 TRENDING_TOPICS = [
-    "Technology", "Sports", "Entertainment", "News", "Finance",
-    "Science", "Health", "Food", "Fashion", "Travel"
+    "Tesla", "YouTube", "Olympics", "Entertainment news", "Weather",
+    "Netflix", "Black Friday", "Holiday travel", "iPhone news",
+    "Education resources", "New movies", "Super Bowl", "Health tips",
+    "Prime Video", "NFL", "NBA", "Business news", "Technology trends"
 ]
 
 @app.route("/trends", methods=["GET"])
 def get_trending_now():
-    """Get trending topics from pytrends or fallback data."""
     try:
-        # Fetch data for United States
         trending_searches_df = pytrends.trending_searches(pn='united_states')
         
         if not trending_searches_df.empty:
-            trends_list = [{"query": row["title"], "traffic": row["traffic"]} for _, row in trending_searches_df.iterrows()]
+            trends_list = [{"query": row["title"], "traffic": row.get("traffic", "N/A")} for _, row in trending_searches_df.iterrows()]
             return jsonify({
                 "trends": trends_list,
                 "count": len(trends_list),
@@ -34,7 +34,7 @@ def get_trending_now():
             })
         else:
             raise ValueError("PyTrends returned no trending data.")
-
+    
     except Exception as e:
         print(f"PyTrends call failed, using fallback data. Error: {e}")
         return jsonify({
@@ -47,7 +47,6 @@ def get_trending_now():
 
 @app.route("/trends/keyword", methods=["GET"])
 def get_keyword_trends():
-    """Get trends for a specific keyword from the pytrends."""
     keyword = request.args.get('query')
     if not keyword:
         return jsonify({"error": "Missing 'query' parameter"}), 400
@@ -79,7 +78,6 @@ def get_keyword_trends():
 
 @app.route("/health", methods=["GET"])
 def health_check():
-    """Simple health check endpoint."""
     return jsonify({
         "status": "healthy",
         "service": "vitara-trends-backend",
