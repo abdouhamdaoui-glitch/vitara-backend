@@ -12,26 +12,19 @@ pytrends = TrendReq(hl='en-US', tz=360)
 
 # Pre-defined list of common trending topics for fallback
 TRENDING_TOPICS = [
-    "Taylor Swift", "NBA", "NFL", "Weather", "Stock Market",
-    "COVID updates", "Elections", "New movies", "Sports news",
-    "Technology trends", "Travel destinations", "Food recipes",
-    "Music releases", "Gaming news", "Education resources",
-    "Space news", "Climate change", "Health tips", "Business news",
-    "Entertainment news", "Super Bowl", "Olympics", "Holiday travel",
-    "Black Friday", "Cyber Monday", "Amazon deals", "iPhone news",
-    "Android updates", "Tesla", "Elon Musk", "Facebook", "Instagram",
-    "TikTok trends", "YouTube", "Netflix", "Disney+", "Prime Video"
+    "Technology", "Sports", "Entertainment", "News", "Finance",
+    "Science", "Health", "Food", "Fashion", "Travel"
 ]
 
 @app.route("/trends", methods=["GET"])
 def get_trending_now():
     """Get trending topics from pytrends or fallback data."""
     try:
+        # Fetch data for United States
         trending_searches_df = pytrends.trending_searches(pn='united_states')
-        trending_searches = trending_searches_df.to_dict('records')
-
-        if trending_searches:
-            trends_list = [{"query": item.get("title"), "traffic": item.get("traffic", "N/A")} for item in trending_searches]
+        
+        if not trending_searches_df.empty:
+            trends_list = [{"query": row["title"], "traffic": row["traffic"]} for _, row in trending_searches_df.iterrows()]
             return jsonify({
                 "trends": trends_list,
                 "count": len(trends_list),
@@ -49,7 +42,7 @@ def get_trending_now():
             "count": len(TRENDING_TOPICS),
             "timestamp": datetime.now().isoformat(),
             "source": "reliable_fallback",
-            "message": f"Using reliable fallback data. Error: {str(e)}"
+            "message": f"Using reliable fallback data due to a live API error: {str(e)}"
         })
 
 @app.route("/trends/keyword", methods=["GET"])
