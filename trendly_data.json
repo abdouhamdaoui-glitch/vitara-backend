@@ -1,18 +1,14 @@
-{
-  "topics": {
-    "France": {
-      "top": [
-        { "query": "Paris Fashion Week", "category": "Fashion" },
-        { "query": "Euro 2025", "category": "Sports" },
-        { "query": "New Movie Release", "category": "Entertainment" }
-      ],
-      "rising": [
-        { "query": "Art Exhibition Paris", "category": "Art" },
-        { "query": "Tech Conference France", "category": "Technology" }
-      ]
-    }
-  },
-  "categories": {
-    "cat": ["Fashion", "Sports", "Entertainment", "Art", "Technology"]
-  }
-}
+curl --request GET \
+	--url 'https://google-trends-api4.p.rapidapi.com/api/v3/trends/nows?geo=US' \
+	--header 'x-rapidapi-host: google-trends-api4.p.rapidapi.com' \
+	--header 'x-rapidapi-key: 24b5aa43d1msh6602bfbd74dcefep190f3cjsn19fa0c61e536'
+
+curl --request GET \
+	--url 'https://google-trends-api4.p.rapidapi.com/api/v3/trends/top?geo=US' \
+	--header 'x-rapidapi-host: google-trends-api4.p.rapidapi.com' \
+	--header 'x-rapidapi-key: 24b5aa43d1msh6602bfbd74dcefep190f3cjsn19fa0c61e536'
+
+curl --request GET \
+	--url 'https://google-trends-api4.p.rapidapi.com/api/v3/trends?geo=US' \
+	--header 'x-rapidapi-host: google-trends-api4.p.rapidapi.com' \
+	--header 'x-rapidapi-key: 24b5aa43d1msh6602bfbd74dcefep190f3cjsn19fa0c61e536'
